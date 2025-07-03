@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+// screens/SucheScreen.js
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     View, Text, StyleSheet, ScrollView,
     TouchableOpacity, TextInput
@@ -7,32 +8,68 @@ import { Ionicons } from '@expo/vector-icons';
 import FloatingButton from '../components/FloatingButton';
 import AddTaskModal from '../components/AddTaskModal';
 import TaskDetailModal from '../components/TaskDetailModal';
+import ConfirmModal from '../components/ConfirmModal';
 import { useTasks } from '../context/TaskContext';
+import { useXP } from '../context/XPContext';
 
 export default function SucheScreen() {
     const [modalVisible, setModalVisible] = useState(false);
     const [selectedTask, setSelectedTask] = useState(null);
     const [searchText, setSearchText] = useState('');
-    const { tasks, addTask, toggleDone, deleteTask, updateTask } = useTasks();
+    const [confirmVisible, setConfirmVisible] = useState(false);
+    const [pendingTask, setPendingTask] = useState(null);
 
-    const getPriorityColor = (priority) => {
-        const colors = {
-            '1': '#EDE7F6',
-            '2': '#D1C4E9',
-            '3': '#B39DDB',
-            '4': '#9575CD',
-            '5': '#7E57C2'
-        };
-        return colors[priority] || '#EDE7F6';
-    };
+    const { tasks, checkTask, deleteTask, updateTask } = useTasks();
+    const { addXP } = useXP();
 
-    const getRecurrenceIcon = (rec) => {
-        return rec === 'Einmalig' ? 'calendar-outline' : 'repeat';
-    };
+    // Alte Tasks automatisch entfernen
+    useEffect(() => {
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        tasks.forEach(task => {
+            const d = new Date(task.date); d.setHours(0, 0, 0, 0);
+            if (d < today) deleteTask(task);
+        });
+    }, [tasks]);
 
-    const filteredTasks = tasks.filter(task =>
-        task.title.toLowerCase().includes(searchText.toLowerCase())
-    );
+    // Filtern & Sortieren
+    const filteredAndSorted = useMemo(() => {
+        const now = new Date();
+        return tasks
+            .filter(t => t.title.toLowerCase().includes(searchText.toLowerCase()))
+            .map(t => ({
+                task: t,
+                date: new Date(t.date),
+                past: new Date(t.date) < now
+            }))
+            .sort((a, b) => b.date - a.date);
+    }, [tasks, searchText]);
+
+    const getPriorityColor = p => ({
+        '1': '#EDE7F6', '2': '#D1C4E9',
+        '3': '#B39DDB', '4': '#9575CD', '5': '#7E57C2'
+    })[p] || '#EDE7F6';
+
+    const getRecurrenceIcon = r =>
+        r === 'Einmalig' ? 'calendar-outline' : 'repeat';
+
+    function onRadioPress({ task, date, past }, idx) {
+        if (task.done) return;
+        if (!past) {
+            // nicht überfällig → Bestätigen
+            setPendingTask({ task, idx });
+            setConfirmVisible(true);
+        } else {
+            // überfällig → direkt abhaken + XP
+            doCheck(task, idx);
+        }
+    }
+
+    function doCheck(task, idx) {
+        checkTask(idx);
+        addXP(task.priority);
+        setConfirmVisible(false);
+        setPendingTask(null);
+    }
 
     return (
         <View style={styles.container}>
@@ -44,33 +81,54 @@ export default function SucheScreen() {
             />
 
             <ScrollView style={styles.taskList}>
-                {filteredTasks.map((task, i) => (
-                    <TouchableOpacity
-                        key={i}
-                        onPress={() => setSelectedTask(task)}
-                        style={[styles.taskBox, { backgroundColor: getPriorityColor(task.priority) }]}
-                    >
+                <Text style={styles.subHeader}>Kürzlich erstellt</Text>
+                {filteredAndSorted.map(({ task, date, past }, i) => {
+                    const done = task.done;
+                    const doneAt = task.doneAt ? new Date(task.doneAt) : null;
+                    let borderColor = 'transparent';
+
+                    if (done) {
+                        // wenn nach Fälligkeit abgehakt → Grün
+                        // wenn überfällig abgehakt → Gelb
+                        borderColor = doneAt > date ? 'green' : 'yellow';
+                    } else if (past) {
+                        borderColor = 'red';
+                    }
+
+                    return (
                         <TouchableOpacity
-                            onPress={() => toggleDone(i)}
-                            style={styles.radioButton}
-                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            key={i}
+                            onPress={() => setSelectedTask(task)}
+                            style={[
+                                styles.taskBox,
+                                {
+                                    backgroundColor: getPriorityColor(task.priority),
+                                    borderColor,
+                                    borderWidth: borderColor === 'transparent' ? 0 : 2
+                                }
+                            ]}
                         >
-                            {task.done && <Ionicons name="checkmark" size={20} color="#7E57C2" />}
+                            <TouchableOpacity
+                                style={styles.radioButton}
+                                onPress={() => onRadioPress({ task, date, past }, i)}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            >
+                                {done && <Ionicons name="checkmark" size={20} color="#7E57C2" />}
+                            </TouchableOpacity>
+
+                            <View style={styles.separator} />
+
+                            <View style={styles.titleRow}>
+                                <Text style={styles.taskTitle}>{task.title}</Text>
+                                <Ionicons
+                                    name={getRecurrenceIcon(task.recurrence)}
+                                    size={18} color="#7E57C2"
+                                    style={{ marginLeft: 8 }}
+                                />
+                            </View>
                         </TouchableOpacity>
-
-                        <View style={styles.separator} />
-
-                        <View style={styles.titleRow}>
-                            <Text style={styles.taskTitle}>{task.title}</Text>
-                            <Ionicons
-                                name={getRecurrenceIcon(task.recurrence)}
-                                size={18}
-                                color="#7E57C2"
-                                style={{ marginLeft: 8 }}
-                            />
-                        </View>
-                    </TouchableOpacity>
-                ))}
+                    );
+                })}
             </ScrollView>
 
             <FloatingButton onPress={() => setModalVisible(true)} />
@@ -78,7 +136,9 @@ export default function SucheScreen() {
             <AddTaskModal
                 visible={modalVisible}
                 onClose={() => setModalVisible(false)}
-                onSubmit={addTask}
+                onSubmit={task => {
+                    addTask(task);
+                }}
             />
 
             <TaskDetailModal
@@ -89,9 +149,21 @@ export default function SucheScreen() {
                     deleteTask(selectedTask);
                     setSelectedTask(null);
                 }}
-                onUpdate={(updated) => {
-                    updateTask({ original: selectedTask, newData: updated });
+                onUpdate={upd => {
+                    updateTask({ original: selectedTask, newData: upd });
                     setSelectedTask(null);
+                }}
+            />
+
+            <ConfirmModal
+                visible={confirmVisible}
+                message="Bist du sicher, dass du diese Aufgabe abhaken möchtest?"
+                onCancel={() => {
+                    setConfirmVisible(false);
+                    setPendingTask(null);
+                }}
+                onConfirm={() => {
+                    if (pendingTask) doCheck(pendingTask.task, pendingTask.idx);
                 }}
             />
         </View>
@@ -102,8 +174,12 @@ const styles = StyleSheet.create({
     container: { flex: 1, padding: 20, paddingBottom: 90 },
     searchInput: {
         borderWidth: 1, borderColor: '#ccc',
-        borderRadius: 10, padding: 10, marginBottom: 15,
+        borderRadius: 10, padding: 10, marginBottom: 5,
         backgroundColor: '#fff'
+    },
+    subHeader: {
+        fontSize: 14, color: '#666',
+        marginBottom: 10, marginLeft: 4
     },
     taskList: { flex: 1 },
     taskBox: {
@@ -117,10 +193,9 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff', marginRight: 12
     },
     separator: {
-        width: 1, height: 24, backgroundColor: '#7E57C2', marginRight: 12
+        width: 1, height: 24,
+        backgroundColor: '#7E57C2', marginRight: 12
     },
-    titleRow: {
-        flexDirection: 'row', alignItems: 'center'
-    },
-    taskTitle: { fontSize: 16, color: '#333' }
+    titleRow: { flexDirection: 'row', alignItems: 'center' },
+    taskTitle: { fontSize: 16, color: '#333', flex: 1 }
 });

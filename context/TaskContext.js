@@ -1,4 +1,3 @@
-// context/TaskContext.js
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -8,63 +7,44 @@ const TaskContext = createContext();
 export const TaskProvider = ({ children }) => {
     const [tasks, setTasks] = useState([]);
 
-    const loadTasks = async () => {
-        try {
-            const json = await AsyncStorage.getItem(TASKS_KEY);
-            setTasks(json ? JSON.parse(json) : []);
-        } catch (e) {
-            console.error('Fehler beim Laden der Aufgaben:', e);
-        }
+    const load = async () => {
+        const json = await AsyncStorage.getItem(TASKS_KEY);
+        setTasks(json ? JSON.parse(json) : []);
+    };
+    useEffect(() => { load(); }, []);
+
+    const persist = async next => {
+        setTasks(next);
+        await AsyncStorage.setItem(TASKS_KEY, JSON.stringify(next));
     };
 
-    useEffect(() => {
-        loadTasks();
-    }, []);
-
-    const addTask = async (task) => {
+    const addTask = async task => {
         const next = [...tasks, { ...task, done: false }];
-        setTasks(next);
-        await AsyncStorage.setItem(TASKS_KEY, JSON.stringify(next));
+        await persist(next);
     };
 
-    const toggleDone = async (index) => {
+    // ersetzt toggleDone
+    const checkTask = async index => {
         const next = [...tasks];
-        next[index].done = !next[index].done;
-        setTasks(next);
-        await AsyncStorage.setItem(TASKS_KEY, JSON.stringify(next));
+        if (next[index].done) return;           // Uncheck nicht erlaubt
+        next[index].done = true;
+        next[index].doneAt = new Date().toString();
+        await persist(next);
     };
 
-    const deleteTask = async (taskToDelete) => {
-        const next = tasks.filter(t => t !== taskToDelete);
-        setTasks(next);
-        await AsyncStorage.setItem(TASKS_KEY, JSON.stringify(next));
+    const deleteTask = async t => {
+        const next = tasks.filter(x => x !== t);
+        await persist(next);
     };
 
     const updateTask = async ({ original, newData }) => {
-        const next = tasks.map(t => t === original ? newData : t);
-        setTasks(next);
-        await AsyncStorage.setItem(TASKS_KEY, JSON.stringify(next));
-    };
-
-    // Clears both AsyncStorage and context state
-    const clearAllTasks = async () => {
-        try {
-            setTasks([]);
-            await AsyncStorage.removeItem(TASKS_KEY);
-        } catch (e) {
-            console.error('Fehler beim Leeren des Speichers:', e);
-        }
+        const next = tasks.map(x => x === original ? newData : x);
+        await persist(next);
     };
 
     return (
         <TaskContext.Provider value={{
-            tasks,
-            addTask,
-            toggleDone,
-            deleteTask,
-            updateTask,
-            clearAllTasks,
-            reloadTasks: loadTasks
+            tasks, addTask, checkTask, deleteTask, updateTask, reloadTasks: load
         }}>
             {children}
         </TaskContext.Provider>

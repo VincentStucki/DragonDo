@@ -1,27 +1,18 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
-
+// App.js
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import TabNavigator from './navigation/TabNavigator';
+import { XPProvider } from './context/XPContext';
 import { TaskProvider } from './context/TaskContext';
+import TabNavigator from './navigation/TabNavigator';
 
 export default function App() {
   return (
-    <TaskProvider>
-      <NavigationContainer>
-        <TabNavigator />
-      </NavigationContainer>
-    </TaskProvider>
+    <XPProvider>
+      <TaskProvider>
+        <NavigationContainer>
+          <TabNavigator />
+        </NavigationContainer>
+      </TaskProvider>
+    </XPProvider>
   );
 }
-
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

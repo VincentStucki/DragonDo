@@ -1,87 +1,159 @@
 import React, { useState, useMemo } from 'react';
 import {
-    View, Text, StyleSheet, ScrollView,
-    TouchableOpacity
+    View, Text, StyleSheet,
+    SectionList, TouchableOpacity,
+    ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import FloatingButton from '../components/FloatingButton';
 import AddTaskModal from '../components/AddTaskModal';
 import TaskDetailModal from '../components/TaskDetailModal';
+import ConfirmModal from '../components/ConfirmModal';
 import { useTasks } from '../context/TaskContext';
-
-const groupTasksByMonthAndDay = (tasks) => {
-    const grouped = {};
-    tasks.forEach(task => {
-        const d = new Date(task.date);
-        const monthKey = d.toLocaleDateString('de-DE', { year: 'numeric', month: 'long' });
-        const dayKey = d.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' });
-        grouped[monthKey] = grouped[monthKey] || {};
-        grouped[monthKey][dayKey] = grouped[monthKey][dayKey] || [];
-        grouped[monthKey][dayKey].push({ task, fullDate: d });
-    });
-    return Object.entries(grouped)
-        .sort((a, b) => new Date(`${a[0]} 1`) - new Date(`${b[0]} 1`))
-        .map(([month, days]) => [
-            month,
-            Object.entries(days).sort((a, b) => a[1][0].fullDate - b[1][0].fullDate)
-        ]);
-};
+import { useOccurrences } from '../hooks/useOccurrences';
 
 export default function DemnaechstScreen() {
     const [modalVisible, setModalVisible] = useState(false);
-    const [selectedTask, setSelectedTask] = useState(null);
-    const { tasks, addTask, toggleDone, deleteTask, updateTask } = useTasks();
+    const [confirmVisible, setConfirmVisible] = useState(false);
+    const [pendingIndex, setPendingIndex] = useState(null);
+    const [selectedOcc, setSelectedOcc] = useState(null);
+    const [loadedCount, setLoadedCount] = useState(7);
+    const [loadingMore, setLoadingMore] = useState(false);
 
-    const getPriorityColor = (p) => {
-        const colors = {
-            '1': '#EDE7F6', '2': '#D1C4E9', '3': '#B39DDB',
-            '4': '#9575CD', '5': '#7E57C2'
-        };
-        return colors[p] || '#EDE7F6';
+    const { tasks, addTask, checkTask, deleteTask, updateTask } = useTasks();
+
+    // alle Vorkommnisse im nächsten Jahr
+    const allOcc = useOccurrences(tasks, 365);
+    const occ = allOcc.slice(0, loadedCount);
+    const canMore = loadedCount < allOcc.length;
+
+    // gruppieren wie gehabt
+    const sections = useMemo(() => {
+        const map = {};
+        occ.forEach(({ original: task, date, key }) => {
+            const m = date.toLocaleDateString('de-DE', { year: 'numeric', month: 'long' });
+            const d = date.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' });
+            if (!map[m]) map[m] = {};
+            if (!map[m][d]) map[m][d] = [];
+            map[m][d].push({ task, date, key });
+        });
+        return Object.entries(map)
+            .sort(([a], [b]) => new Date(`${a} 1`) - new Date(`${b} 1`))
+            .map(([month, daysObj]) => ({
+                title: month,
+                data: Object.entries(daysObj)
+                    .sort(([a], [b]) => {
+                        const da = new Date(daysObj[a][0].date).setHours(0, 0, 0, 0);
+                        const db = new Date(daysObj[b][0].date).setHours(0, 0, 0, 0);
+                        return da - db;
+                    })
+                    .map(([day, items]) => ({
+                        day,
+                        items: items.sort((x, y) => x.date - y.date)
+                    }))
+            }));
+    }, [occ]);
+
+    const now = new Date();
+    const getPriorityColor = p => ({
+        '1': '#EDE7F6', '2': '#D1C4E9', '3': '#B39DDB',
+        '4': '#9575CD', '5': '#7E57C2'
+    })[p] || '#EDE7F6';
+    const getRecurrenceIcon = r => r === 'Einmalig' ? 'calendar-outline' : 'repeat';
+
+    const onRadioPress = (index, date, done) => {
+        if (done) return;               // bereits erledigt → nix tun
+        const isOverdue = date < now;   // rot-Bedingung
+        if (!isOverdue) {
+            setPendingIndex(index);
+            setConfirmVisible(true);
+        } else {
+            doCheck(index);
+        }
     };
 
-    const grouped = useMemo(() => groupTasksByMonthAndDay(tasks), [tasks]);
+    const doCheck = idx => {
+        checkTask(idx);
+        setConfirmVisible(false);
+        setPendingIndex(null);
+    };
 
-    const getRecurrenceIcon = (rec) =>
-        rec === 'Einmalig' ? 'calendar-outline' : 'repeat';
+    const handleEndReached = () => {
+        if (!canMore || loadingMore) return;
+        setLoadingMore(true);
+        setLoadedCount(c => c + 7);
+    };
+
+    React.useEffect(() => {
+        if (loadingMore) setLoadingMore(false);
+    }, [occ]);
+
+    const renderDay = ({ item }) => (
+        <View>
+            <Text style={styles.dayHeader}>{item.day}</Text>
+            {item.items.map(({ task, date, key }) => {
+                const idx = tasks.indexOf(task);
+                const isDone = !!task.done;
+                const doneAt = task.doneAt ? new Date(task.doneAt) : null;
+                const isOverdue = date < now && !isDone;
+                let borderColor = 'transparent';
+                if (isDone && doneAt > date) borderColor = 'yellow';
+                else if (isDone) borderColor = 'green';
+                else if (isOverdue) borderColor = 'red';
+
+                const timeLabel = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                return (
+                    <TouchableOpacity
+                        key={key}
+                        style={[
+                            styles.taskBox,
+                            {
+                                backgroundColor: getPriorityColor(task.priority),
+                                borderColor, borderWidth: borderColor === 'transparent' ? 0 : 2
+                            }
+                        ]}
+                        onPress={() => setSelectedOcc({ task, date })}
+                    >
+                        <TouchableOpacity
+                            style={styles.radioButton}
+                            onPress={() => onRadioPress(idx, date, isDone)}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                            {isDone && <Ionicons name="checkmark" size={20} color="#7E57C2" />}
+                        </TouchableOpacity>
+
+                        <View style={styles.separator} />
+
+                        <View style={styles.titleRow}>
+                            <Text style={styles.taskTitle}>{task.title}</Text>
+                            <Ionicons
+                                name={getRecurrenceIcon(task.recurrence)}
+                                size={18} color="#7E57C2"
+                            />
+                            <Text style={styles.timeLabel}>{timeLabel}</Text>
+                        </View>
+                    </TouchableOpacity>
+                );
+            })}
+        </View>
+    );
 
     return (
         <View style={styles.container}>
-            <ScrollView style={styles.taskList}>
-                {grouped.map(([month, days], i) => (
-                    <View key={i}>
-                        <Text style={styles.monthHeader}>{month}</Text>
-                        {days.map(([day, arr], j) => (
-                            <View key={j}>
-                                <Text style={styles.dayHeader}>{day}</Text>
-                                {arr.map(({ task }, k) => (
-                                    <TouchableOpacity
-                                        key={k}
-                                        onPress={() => setSelectedTask(task)}
-                                        style={[styles.taskBox, { backgroundColor: getPriorityColor(task.priority) }]}
-                                    >
-                                        <TouchableOpacity
-                                            onPress={() => toggleDone(tasks.indexOf(task))}
-                                            style={styles.radioButton}
-                                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                        >
-                                            {task.done && <Ionicons name="checkmark" size={20} color="#7E57C2" />}
-                                        </TouchableOpacity>
-                                        <View style={styles.separator} />
-                                        <View style={styles.titleRow}>
-                                            <Text style={styles.taskTitle}>{task.title}</Text>
-                                            <Ionicons
-                                                name={getRecurrenceIcon(task.recurrence)}
-                                                size={18} color="#7E57C2" style={{ marginLeft: 8 }}
-                                            />
-                                        </View>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        ))}
-                    </View>
-                ))}
-            </ScrollView>
+            <SectionList
+                sections={sections}
+                keyExtractor={item => item.items[0].key}
+                renderSectionHeader={({ section }) => (
+                    <Text style={styles.monthHeader}>{section.title}</Text>
+                )}
+                renderItem={renderDay}
+                onEndReached={handleEndReached}
+                onEndReachedThreshold={0.5}
+                ListFooterComponent={() =>
+                    loadingMore ? <ActivityIndicator style={{ margin: 20 }} /> : null
+                }
+            />
 
             <FloatingButton onPress={() => setModalVisible(true)} />
 
@@ -92,42 +164,50 @@ export default function DemnaechstScreen() {
             />
 
             <TaskDetailModal
-                visible={!!selectedTask}
-                task={selectedTask}
-                onClose={() => setSelectedTask(null)}
-                onDelete={() => { deleteTask(selectedTask); setSelectedTask(null); }}
-                onUpdate={(upd) => { updateTask({ original: selectedTask, newData: upd }); setSelectedTask(null); }}
+                visible={!!selectedOcc}
+                task={selectedOcc?.task}
+                occurrenceDate={selectedOcc?.date}
+                onClose={() => setSelectedOcc(null)}
+                onDelete={() => { deleteTask(selectedOcc.task); setSelectedOcc(null); }}
+                onUpdate={upd => { updateTask({ original: selectedOcc.task, newData: upd }); setSelectedOcc(null); }}
+            />
+
+            <ConfirmModal
+                visible={confirmVisible}
+                message="Bist du sicher, dass du diese Aufgabe abhaken möchtest?"
+                onCancel={() => { setConfirmVisible(false); setPendingIndex(null); }}
+                onConfirm={() => doCheck(pendingIndex)}
             />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 20, paddingBottom: 90 },
-    taskList: { flex: 1 },
+    container: { flex: 1, backgroundColor: '#fff' },
     monthHeader: {
         fontSize: 20, fontWeight: 'bold',
-        color: '#4527A0', marginTop: 20, marginBottom: 10
+        color: '#4527A0', margin: 10
     },
     dayHeader: {
         fontSize: 16, fontWeight: '600',
-        color: '#7E57C2', marginVertical: 5, marginLeft: 5
+        color: '#7E57C2', marginLeft: 20, marginVertical: 5
     },
     taskBox: {
         flexDirection: 'row', alignItems: 'center',
-        padding: 15, borderRadius: 12, marginBottom: 10
+        padding: 15, borderRadius: 12,
+        marginHorizontal: 10, marginVertical: 5
     },
     radioButton: {
         width: 28, height: 28, borderRadius: 14,
         borderWidth: 2, borderColor: '#7E57C2',
         alignItems: 'center', justifyContent: 'center',
-        backgroundColor: '#fff', marginRight: 12
+        backgroundColor: '#fff'
     },
     separator: {
-        width: 1, height: 24, backgroundColor: '#7E57C2', marginRight: 12
+        width: 1, height: 24,
+        backgroundColor: '#7E57C2', marginHorizontal: 12
     },
-    titleRow: {
-        flexDirection: 'row', alignItems: 'center'
-    },
-    taskTitle: { fontSize: 16, color: '#333' }
+    titleRow: { flex: 1, flexDirection: 'row', alignItems: 'center' },
+    taskTitle: { fontSize: 16, color: '#333', flex: 1 },
+    timeLabel: { marginLeft: 8, fontSize: 14, color: '#555' }
 });
