@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Modal,
     View,
@@ -9,15 +9,34 @@ import {
     KeyboardAvoidingView,
     Platform,
     TouchableWithoutFeedback,
-    Keyboard
+    Keyboard,
+    Alert
 } from 'react-native';
+import { useTasks } from '../context/TaskContext';
 
 export default function SettingsModal({ visible, onClose, currentName, onSave }) {
     const [name, setName] = useState(currentName);
+    const { clearAllTasks } = useTasks();
+
+    useEffect(() => {
+        if (visible) {
+            setName(currentName);
+        }
+    }, [visible, currentName]);
 
     const handleSave = () => {
         onSave(name);
         onClose();
+    };
+
+    const handleClearStorage = async () => {
+        try {
+            await clearAllTasks();
+            Alert.alert('Erfolg', 'Alle Tasks wurden gelöscht.');
+            onClose();
+        } catch (e) {
+            Alert.alert('Fehler', 'Speicher konnte nicht gelöscht werden.');
+        }
     };
 
     return (
@@ -42,8 +61,16 @@ export default function SettingsModal({ visible, onClose, currentName, onSave })
                                     onChangeText={setName}
                                     placeholder="Gib einen Namen ein"
                                 />
+
                                 <TouchableOpacity style={styles.button} onPress={handleSave}>
                                     <Text style={styles.buttonText}>Speichern</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={[styles.button, styles.clearButton]}
+                                    onPress={handleClearStorage}
+                                >
+                                    <Text style={styles.buttonText}>Tasks löschen</Text>
                                 </TouchableOpacity>
                             </View>
                         </KeyboardAvoidingView>
@@ -89,6 +116,10 @@ const styles = StyleSheet.create({
         backgroundColor: '#7E57C2',
         padding: 12,
         borderRadius: 10,
+        marginTop: 10,
+    },
+    clearButton: {
+        backgroundColor: '#e53935',
     },
     buttonText: {
         color: '#fff',
