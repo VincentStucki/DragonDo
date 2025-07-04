@@ -11,7 +11,7 @@ import { scheduleTaskReminder } from '../utils/notificationUtils';
 
 
 const RECURRENCE_OPTIONS = ['Einmalig', 'Täglich', 'Wöchentlich', 'Monatlich', 'Jährlich'];
-
+//Fenster um Tasks hinzuzufügen
 export default function AddTaskModal({ visible, onClose, onSubmit }) {
     const [title, setTitle] = useState('');
     const [desc, setDesc] = useState('');

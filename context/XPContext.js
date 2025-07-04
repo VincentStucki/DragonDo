@@ -7,7 +7,7 @@ export const XP_THRESHOLDS = [0, 100, 250, 500, 1000];
 export const EVOLUTION_STAGES = ['dragonegg', 'babydragon', 'teendragon', 'adultdragon', 'legendarydragon'];
 
 const XPContext = createContext();
-
+//Für die Speicherung der XP-Werte
 export const XPProvider = ({ children }) => {
     const [xp, setXp] = useState(0);
 
@@ -16,13 +16,13 @@ export const XPProvider = ({ children }) => {
             .then(v => { if (v != null) setXp(parseInt(v, 10)); })
             .catch(() => { });
     }, []);
-
+    //Hinzufügen
     const addXP = async amount => {
         const next = xp + amount;
         setXp(next);
         await AsyncStorage.setItem(XP_KEY, next.toString());
     };
-
+    //Zurücksetzen
     const resetXP = async () => {
         setXp(0);
         await AsyncStorage.removeItem(XP_KEY);

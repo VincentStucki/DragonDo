@@ -12,7 +12,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import { useTasks } from '../context/TaskContext';
 import { getXPFromPriority } from '../utils/xp';
 import AppBackground from '../components/AppBackground';
-
+//Sucht nach bestimmten Task
 export default function SucheScreen() {
     const [modalVisible, setModalVisible] = useState(false);
     const [selectedTask, setSelectedTask] = useState(null);

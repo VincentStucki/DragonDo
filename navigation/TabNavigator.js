@@ -9,7 +9,7 @@ import { Ionicons, Feather, MaterialIcons } from '@expo/vector-icons';
 import { TouchableOpacity, Text } from 'react-native';
 
 const initialLayout = { width: Dimensions.get('window').width };
-
+//Tab Navigator mit Swipe funktion
 export default function BottomSwipeNavigator() {
     const [index, setIndex] = React.useState(1);
 
@@ -27,6 +27,7 @@ export default function BottomSwipeNavigator() {
         statistik: StatistikScreen,
     });
 
+    //Damit alle screens vorgeladen werden
     const renderTabBar = () => (
         <View style={styles.tabBar}>
             {routes.map((route, i) => (

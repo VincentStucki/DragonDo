@@ -16,7 +16,7 @@ import { useXP } from '../context/XPContext';
 import AppBackground from '../components/AppBackground';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
-
+//Screen um Tasks in der Reihe zu sehen
 export default function DemnaechstScreen() {
     const [modalVisible, setModalVisible] = useState(false);
     const [confirmVisible, setConfirmVisible] = useState(false);
@@ -76,7 +76,7 @@ export default function DemnaechstScreen() {
         '5': '#7E57C2',
     }[p] || '#B39DDB');
 
-
+    //Text farbe anhan der Priorität
     const getTextColor = (p) => {
         switch (p) {
             case '1': return '#222'; // dunkel auf hellem Hintergrund

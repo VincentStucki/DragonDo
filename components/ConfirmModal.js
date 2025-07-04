@@ -9,7 +9,7 @@ import {
     Vibration,
     Platform
 } from 'react-native';
-
+// Fenster für die Bestätigung
 export default function ConfirmModal({ visible, message, onConfirm, onCancel }) {
     const handleConfirm = () => {
         if (Platform.OS !== 'web') {

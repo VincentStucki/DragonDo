@@ -6,16 +6,21 @@
     "orientation": "portrait",
     "icon": "./assets/logo.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "splash": {
       "image": "./assets/logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSUserNotificationUsageDescription": "Diese App benötigt Benachrichtigungen für Erinnerungen an deine Aufgaben."
+      }
     },
     "android": {
+      "package": "ch.vincent.dragondo",
+      "versionCode": 1,
+      "permissions": [],
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#ffffff"
@@ -24,24 +29,28 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
-  },
-  "plugins": [
-    [
-      "expo-notifications",
-      {
-        "icon": "./assets/icon.png",
-        "color": "#7E57C2",
-        "mode": "production",
-        "sounds": [
-          "default"
-        ]
+    },
+    "extra": {
+      "eas": {
+        "projectId": "1a5ad3e1-549e-4e08-bfe3-91e1409513e6"
       }
+    },
+    "owner": "cloverluck06",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#7E57C2",
+          "mode": "production"
+        }
+      ]
     ]
-  ],
-  "ios": {
-    "infoPlist": {
-      "NSUserNotificationUsageDescription": "Diese App benötigt Benachrichtigungen für Erinnerungen an deine Aufgaben."
-    }
   }
 }

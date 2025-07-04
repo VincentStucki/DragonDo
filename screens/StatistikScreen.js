@@ -5,7 +5,7 @@ import { useXP } from '../context/XPContext';
 import { ProgressChart, LineChart } from 'react-native-chart-kit';
 
 const screenWidth = Dimensions.get('window').width;
-
+//Statistik anschauungen
 export default function StatistikScreen() {
     const { tasks } = useTasks();
     const { xp } = useXP();
