@@ -7,6 +7,8 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Modal from 'react-native-modal';
+import { scheduleTaskReminder } from '../utils/notificationUtils';
+
 
 const RECURRENCE_OPTIONS = ['Einmalig', 'Täglich', 'Wöchentlich', 'Monatlich', 'Jährlich'];
 
@@ -34,13 +36,29 @@ export default function AddTaskModal({ visible, onClose, onSubmit }) {
         }
     }, [visible]);
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         const dt = new Date(
             date.getFullYear(), date.getMonth(), date.getDate(),
             time.getHours(), time.getMinutes()
         );
-        onSubmit({ title, desc, date: dt.toString(), priority, recurrence });
+
+        const newTask = {
+            title,
+            desc,
+            date: dt.toString(),
+            priority,
+            recurrence
+        };
+
+        if (!title.trim()) {
+            Alert.alert('Fehler', 'Titel darf nicht leer sein');
+            return;
+        }
+
+
+        onSubmit(newTask);
         onClose();
+        await scheduleTaskReminder(newTask);
     };
 
     return (
@@ -60,7 +78,7 @@ export default function AddTaskModal({ visible, onClose, onSubmit }) {
                     <View style={styles.content}>
                         <View style={styles.dragHandle} />
 
-                        <Text style={styles.label}>Titel</Text>
+                        <Text style={styles.label}>*Titel</Text>
                         <TextInput
                             style={styles.input}
                             value={title}

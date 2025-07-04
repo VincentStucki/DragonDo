@@ -25,5 +25,23 @@
     "web": {
       "favicon": "./assets/favicon.png"
     }
+  },
+  "plugins": [
+    [
+      "expo-notifications",
+      {
+        "icon": "./assets/icon.png",
+        "color": "#7E57C2",
+        "mode": "production",
+        "sounds": [
+          "default"
+        ]
+      }
+    ]
+  ],
+  "ios": {
+    "infoPlist": {
+      "NSUserNotificationUsageDescription": "Diese App benötigt Benachrichtigungen für Erinnerungen an deine Aufgaben."
+    }
   }
 }

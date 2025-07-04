@@ -12,7 +12,10 @@ import { useTasks } from '../context/TaskContext';
 export default function MenuScreen() {
     const [name, setName] = useState('Name');
     const [modalVisible, setModalVisible] = useState(false);
+    const [showGif, setShowGif] = useState(false);
+
     const { xp } = useXP();
+    const { tasks } = useTasks();
 
     useEffect(() => {
         AsyncStorage.getItem('eggName').then(v => {
@@ -25,6 +28,7 @@ export default function MenuScreen() {
         await AsyncStorage.setItem('eggName', newName);
     };
 
+    // Entwicklungsstufe berechnen
     let stage = 0;
     for (let i = XP_THRESHOLDS.length - 1; i >= 0; i--) {
         if (xp >= XP_THRESHOLDS[i]) {
@@ -36,14 +40,25 @@ export default function MenuScreen() {
     const curr = XP_THRESHOLDS[stage];
     const next = XP_THRESHOLDS[stage + 1] ?? curr;
     const progress = next > curr ? (xp - curr) / (next - curr) : 1;
+    const currentStage = EVOLUTION_STAGES[stage];
 
+    // GIF nur bei dragonegg zeigen
+    useEffect(() => {
+        if (currentStage === 'dragonegg') {
+            setShowGif(true);
+            const timer = setTimeout(() => setShowGif(false), 2000);
+            return () => clearTimeout(timer);
+        }
+    }, [currentStage]);
+
+    // Bilder definieren
     const evoImage = {
         dragonegg: require('../assets/dragonegg.png'),
         babydragon: require('../assets/babydragon.png'),
         teendragon: require('../assets/teendragon.png'),
         adultdragon: require('../assets/adultdragon.png'),
         legendarydragon: require('../assets/legendarydragon.png'),
-    }[EVOLUTION_STAGES[stage]];
+    }[currentStage];
 
     const evoImageSize = {
         dragonegg: { width: 200, height: 200 },
@@ -51,15 +66,11 @@ export default function MenuScreen() {
         teendragon: { width: 250, height: 250 },
         adultdragon: { width: 270, height: 270 },
         legendarydragon: { width: 280, height: 280 },
-    }[EVOLUTION_STAGES[stage]];
-
-
-    const { tasks, addTask, checkTask, deleteTask, updateTask } = useTasks();
+    }[currentStage];
 
     const upcomingTask = tasks
         .filter(task => !task.done && new Date(task.date) >= new Date())
-        .sort((a, b) => new Date(a.date) - new Date(b.date))[0]; // Nächste zuerst
-
+        .sort((a, b) => new Date(a.date) - new Date(b.date))[0];
 
     return (
         <ImageBackground
@@ -76,7 +87,21 @@ export default function MenuScreen() {
                 </TouchableOpacity>
 
                 <Text style={styles.title}>{name}</Text>
-                <Image source={evoImage} style={[styles.egg, evoImageSize]} resizeMode="contain" />
+
+                {/* Hier kommt das Ei oder das GIF */}
+                {showGif && currentStage === 'dragonegg' ? (
+                    <Image
+                        source={require('../assets/egg_intro.gif')}
+                        style={[styles.egg, styles.gif]}
+                        resizeMode="contain"
+                    />
+                ) : (
+                    <Image
+                        source={evoImage}
+                        style={[styles.egg, evoImageSize]}
+                        resizeMode="contain"
+                    />
+                )}
 
                 <ProgressBar progress={progress} />
 
@@ -100,7 +125,6 @@ export default function MenuScreen() {
                     )}
                 </View>
 
-
                 <SettingsModal
                     visible={modalVisible}
                     currentName={name}
@@ -123,7 +147,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         padding: 20,
-        backgroundColor: 'rgba(0,0,0,0.3)', // optional: leichtes Overlay für bessere Lesbarkeit
+        backgroundColor: 'rgba(0,0,0,0.3)',
     },
     settingsButton: {
         position: 'absolute',
@@ -135,12 +159,14 @@ const styles = StyleSheet.create({
         fontSize: 28,
         fontWeight: 'bold',
         marginBottom: 20,
-        color: '#fff', // weil Hintergrund dunkel
+        color: '#fff',
     },
     egg: {
-        width: 150,
-        height: 150,
         marginBottom: 30,
+    },
+    gif: {
+        width: 200,
+        height: 200,
     },
     taskPreview: {
         marginTop: 30,
@@ -167,5 +193,4 @@ const styles = StyleSheet.create({
         marginTop: 4,
         textAlign: 'center',
     },
-
 });

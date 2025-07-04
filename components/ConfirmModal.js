@@ -5,22 +5,42 @@ import {
     Text,
     TouchableOpacity,
     StyleSheet,
-    TouchableWithoutFeedback
+    TouchableWithoutFeedback,
+    Vibration,
+    Platform
 } from 'react-native';
 
 export default function ConfirmModal({ visible, message, onConfirm, onCancel }) {
+    const handleConfirm = () => {
+        if (Platform.OS !== 'web') {
+            Vibration.vibrate(5);
+        }
+        onConfirm();
+    };
+
     return (
-        <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+        <Modal
+            visible={visible}
+            transparent
+            animationType="fade"
+            onRequestClose={onCancel}
+        >
             <TouchableWithoutFeedback onPress={onCancel}>
                 <View style={styles.overlay}>
                     <TouchableWithoutFeedback>
                         <View style={styles.box}>
-                            <Text style={styles.text}>{message}</Text>
-                            <View style={styles.row}>
-                                <TouchableOpacity style={styles.btn} onPress={onCancel}>
+                            <Text style={styles.message}>{message}</Text>
+                            <View style={styles.buttons}>
+                                <TouchableOpacity
+                                    style={[styles.btn, styles.cancelBtn]}
+                                    onPress={onCancel}
+                                >
                                     <Text style={styles.btnText}>Abbrechen</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity style={[styles.btn, styles.confirm]} onPress={onConfirm}>
+                                <TouchableOpacity
+                                    style={[styles.btn, styles.confirmBtn]}
+                                    onPress={handleConfirm}
+                                >
                                     <Text style={styles.btnText}>Ja</Text>
                                 </TouchableOpacity>
                             </View>
@@ -35,38 +55,47 @@ export default function ConfirmModal({ visible, message, onConfirm, onCancel }) 
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.4)',
+        backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'center',
-        alignItems: 'center'
+        alignItems: 'center',
     },
     box: {
-        width: '80%',
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        padding: 20
+        width: '85%',
+        backgroundColor: '#1F1B2E',
+        borderRadius: 20,
+        padding: 24,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 10,
+        elevation: 10,
     },
-    text: {
+    message: {
+        color: '#EDE7F6',
         fontSize: 16,
-        marginBottom: 20,
-        textAlign: 'center'
+        textAlign: 'center',
+        marginBottom: 24,
     },
-    row: {
+    buttons: {
         flexDirection: 'row',
-        justifyContent: 'space-between'
+        justifyContent: 'space-between',
     },
     btn: {
         flex: 1,
-        padding: 12,
-        borderRadius: 8,
-        backgroundColor: '#ccc',
-        marginHorizontal: 5
+        paddingVertical: 12,
+        borderRadius: 12,
+        marginHorizontal: 6,
     },
-    confirm: {
-        backgroundColor: '#7E57C2'
+    cancelBtn: {
+        backgroundColor: '#555',
+    },
+    confirmBtn: {
+        backgroundColor: '#7E57C2',
     },
     btnText: {
-        textAlign: 'center',
         color: '#fff',
-        fontWeight: 'bold'
-    }
+        fontWeight: 'bold',
+        textAlign: 'center',
+        fontSize: 15,
+    },
 });

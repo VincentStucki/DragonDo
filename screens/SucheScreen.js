@@ -40,8 +40,13 @@ export default function SucheScreen() {
                 date: new Date(t.date),
                 past: new Date(t.date) < now
             }))
-            .sort((a, b) => b.date - a.date);
+            .sort((a, b) => {
+                const ca = new Date(a.task.createdAt || a.date);
+                const cb = new Date(b.task.createdAt || b.date);
+                return cb - ca;
+            });
     }, [tasks, searchText]);
+
 
     const getPriorityColor = p => ({
         '1': '#EDE7F6', '2': '#D1C4E9',
@@ -113,7 +118,7 @@ export default function SucheScreen() {
                         const done = task.done;
                         let borderColor = 'transparent';
                         if (done) {
-                            borderColor = date < new Date(task.doneAt) ? 'green' : 'yellow';
+                            borderColor = new Date(task.doneAt) <= date ? 'green' : 'yellow';
                         } else if (past) {
                             borderColor = 'red';
                         }
@@ -221,6 +226,7 @@ const styles = StyleSheet.create({
         elevation: 3,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.1)',
+        marginTop: 50,
     },
     searchIcon: {
         marginRight: 8,

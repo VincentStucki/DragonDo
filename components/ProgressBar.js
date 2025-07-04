@@ -34,9 +34,6 @@ export default function ProgressBar({ progress }) {
             <View style={styles.bar}>
                 <Animated.View style={[styles.filler, fillerStyle]} />
             </View>
-            <Animated.View style={[styles.bubble, bubbleStyle]}>
-                <Text style={styles.bubbleText}>{Math.round(progress * 100)}%</Text>
-            </Animated.View>
         </View>
     );
 }
@@ -64,22 +61,5 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.7,
         shadowRadius: 8,
-    },
-    bubble: {
-        position: 'absolute',
-        top: -30,
-        backgroundColor: '#7E57C2',
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 12,
-        shadowColor: '#7E57C2',
-        shadowOpacity: 0.4,
-        shadowRadius: 6,
-        elevation: 4,
-    },
-    bubbleText: {
-        color: '#fff',
-        fontSize: 12,
-        fontWeight: 'bold',
     },
 });
