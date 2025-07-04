@@ -13,10 +13,12 @@ import {
     Alert
 } from 'react-native';
 import { useTasks } from '../context/TaskContext';
+import { useXP } from '../context/XPContext';
 
 export default function SettingsModal({ visible, onClose, currentName, onSave }) {
     const [name, setName] = useState(currentName);
     const { clearAllTasks } = useTasks();
+    const { resetXP } = useXP();
 
     useEffect(() => {
         if (visible) {
@@ -36,6 +38,17 @@ export default function SettingsModal({ visible, onClose, currentName, onSave })
             onClose();
         } catch (e) {
             Alert.alert('Fehler', 'Speicher konnte nicht gelöscht werden.');
+        }
+    };
+
+    const handleClearEverything = async () => {
+        try {
+            await clearAllTasks();               // Tasks löschen
+            await resetXP();                     // XP zurücksetzen
+            Alert.alert('Erfolg', 'Alle Tasks und XP wurden zurückgesetzt.');
+            onClose();
+        } catch (e) {
+            Alert.alert('Fehler', 'Zurücksetzen fehlgeschlagen.');
         }
     };
 
@@ -71,6 +84,9 @@ export default function SettingsModal({ visible, onClose, currentName, onSave })
                                     onPress={handleClearStorage}
                                 >
                                     <Text style={styles.buttonText}>Tasks löschen</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={[styles.button, styles.clearButton]} onPress={handleClearEverything}>
+                                    <Text style={styles.buttonText}>Tasks & XP zurücksetzen</Text>
                                 </TouchableOpacity>
                             </View>
                         </KeyboardAvoidingView>

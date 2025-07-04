@@ -2,44 +2,37 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const XP_KEY = 'XP_TOTAL';
-export const XP_THRESHOLDS = [0, 50, 150, 300, 500];
-export const EVOLUTION_STAGES = [
-    'dragonegg',
-    'babydragon',
-    'teendragon',
-    'adultdragon',
-    'legendarydragon'
-];
+export const XP_KEY = 'USER_XP';
+export const XP_THRESHOLDS = [0, 100, 250, 500, 1000];
+export const EVOLUTION_STAGES = ['dragonegg', 'babydragon', 'teendragon', 'adultdragon', 'legendarydragon'];
 
 const XPContext = createContext();
 
-export function XPProvider({ children }) {
+export const XPProvider = ({ children }) => {
     const [xp, setXp] = useState(0);
 
-    // Beim Mounten aus Storage laden
     useEffect(() => {
-        (async () => {
-            const saved = await AsyncStorage.getItem(XP_KEY);
-            setXp(saved ? parseInt(saved, 10) : 0);
-        })();
+        AsyncStorage.getItem(XP_KEY)
+            .then(v => { if (v != null) setXp(parseInt(v, 10)); })
+            .catch(() => { });
     }, []);
 
-    // XP hinzufügen + speichern
-    const addXP = async (priority) => {
-        const gained = priority * 10;         // z.B. Prio 3 → 30 XP
-        const next = xp + gained;
+    const addXP = async amount => {
+        const next = xp + amount;
         setXp(next);
         await AsyncStorage.setItem(XP_KEY, next.toString());
     };
 
+    const resetXP = async () => {
+        setXp(0);
+        await AsyncStorage.removeItem(XP_KEY);
+    };
+
     return (
-        <XPContext.Provider value={{ xp, addXP }}>
+        <XPContext.Provider value={{ xp, addXP, resetXP }}>
             {children}
         </XPContext.Provider>
     );
-}
+};
 
-export function useXP() {
-    return useContext(XPContext);
-}
+export const useXP = () => useContext(XPContext);

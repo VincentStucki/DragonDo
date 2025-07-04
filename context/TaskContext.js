@@ -37,6 +37,11 @@ export const TaskProvider = ({ children }) => {
         await persist(next);
     };
 
+    const clearAllTasks = async () => {
+        setTasks([]);                         // leere den State
+        await AsyncStorage.removeItem(TASKS_KEY); // lösche den Key
+    };
+
     const updateTask = async ({ original, newData }) => {
         const next = tasks.map(x => x === original ? newData : x);
         await persist(next);
@@ -44,7 +49,7 @@ export const TaskProvider = ({ children }) => {
 
     return (
         <TaskContext.Provider value={{
-            tasks, addTask, checkTask, deleteTask, updateTask, reloadTasks: load
+            tasks, addTask, checkTask, deleteTask, updateTask, clearAllTasks, reloadTasks: load
         }}>
             {children}
         </TaskContext.Provider>

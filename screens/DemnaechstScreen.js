@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import {
     View, Text, StyleSheet,
     SectionList, TouchableOpacity,
-    ActivityIndicator
+    ActivityIndicator, ImageBackground
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import FloatingButton from '../components/FloatingButton';
@@ -11,6 +11,9 @@ import TaskDetailModal from '../components/TaskDetailModal';
 import ConfirmModal from '../components/ConfirmModal';
 import { useTasks } from '../context/TaskContext';
 import { useOccurrences } from '../hooks/useOccurrences';
+import { getXPFromPriority } from '../utils/xp';
+import { useXP } from '../context/XPContext';
+import AppBackground from '../components/AppBackground';
 
 export default function DemnaechstScreen() {
     const [modalVisible, setModalVisible] = useState(false);
@@ -21,6 +24,9 @@ export default function DemnaechstScreen() {
     const [loadingMore, setLoadingMore] = useState(false);
 
     const { tasks, addTask, checkTask, deleteTask, updateTask } = useTasks();
+
+    const [pendingTask, setPendingTask] = useState(null);
+    const { addXP } = useXP();
 
     // alle Vorkommnisse im nächsten Jahr
     const allOcc = useOccurrences(tasks, 365);
@@ -61,21 +67,34 @@ export default function DemnaechstScreen() {
     })[p] || '#EDE7F6';
     const getRecurrenceIcon = r => r === 'Einmalig' ? 'calendar-outline' : 'repeat';
 
-    const onRadioPress = (index, date, done) => {
-        if (done) return;               // bereits erledigt → nix tun
-        const isOverdue = date < now;   // rot-Bedingung
+    // Klick auf den Radiobutton
+    const onRadioPress = (task, taskIdx, date, done) => {
+        if (done) return;
+        const isOverdue = date < now;
         if (!isOverdue) {
-            setPendingIndex(index);
+            setPendingIndex(taskIdx);
+            setPendingTask(task);
             setConfirmVisible(true);
         } else {
-            doCheck(index);
+            // überfällige Aufgaben direkt abhaken, aber ohne XP
+            doCheck(taskIdx, false);
         }
     };
 
-    const doCheck = idx => {
-        checkTask(idx);
+    // tatsächliches Abhaken + XP-Log
+    const doCheck = async (idx, withXP = true) => {
+        await checkTask(idx);
+        if (withXP && pendingTask) {
+            // nur hier lesen wir die Prio aus pendingTask
+            const xp = getXPFromPriority(pendingTask.priority);
+            addXP(xp);
+            console.log("Prio: ", pendingTask.priority);
+            console.log(`Gewonnene XP: ${getXPFromPriority(pendingTask.priority)}`);
+            console.log(`Gewonnen2 XP: ${xp}`);
+        }
         setConfirmVisible(false);
         setPendingIndex(null);
+        setPendingTask(null);
     };
 
     const handleEndReached = () => {
@@ -117,7 +136,7 @@ export default function DemnaechstScreen() {
                     >
                         <TouchableOpacity
                             style={styles.radioButton}
-                            onPress={() => onRadioPress(idx, date, isDone)}
+                            onPress={() => onRadioPress(task, idx, date, isDone)}
                             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         >
                             {isDone && <Ionicons name="checkmark" size={20} color="#7E57C2" />}
@@ -140,57 +159,68 @@ export default function DemnaechstScreen() {
     );
 
     return (
-        <View style={styles.container}>
-            <SectionList
-                sections={sections}
-                keyExtractor={item => item.items[0].key}
-                renderSectionHeader={({ section }) => (
-                    <Text style={styles.monthHeader}>{section.title}</Text>
-                )}
-                renderItem={renderDay}
-                onEndReached={handleEndReached}
-                onEndReachedThreshold={0.5}
-                ListFooterComponent={() =>
-                    loadingMore ? <ActivityIndicator style={{ margin: 20 }} /> : null
-                }
-            />
+        <ImageBackground
+            source={require('../assets/background.png')}
+            style={styles.background}
+            resizeMode="cover"
+        >
+            <AppBackground style={styles.container}>
+                <SectionList
+                    sections={sections}
+                    keyExtractor={item => item.items[0].key}
+                    renderSectionHeader={({ section }) => (
+                        <Text style={styles.monthHeader}>{section.title}</Text>
+                    )}
+                    renderItem={renderDay}
+                    onEndReached={handleEndReached}
+                    onEndReachedThreshold={0.5}
+                    ListFooterComponent={() =>
+                        loadingMore ? <ActivityIndicator style={{ margin: 20 }} /> : null
+                    }
+                />
 
-            <FloatingButton onPress={() => setModalVisible(true)} />
+                <FloatingButton onPress={() => setModalVisible(true)} />
 
-            <AddTaskModal
-                visible={modalVisible}
-                onClose={() => setModalVisible(false)}
-                onSubmit={addTask}
-            />
+                <AddTaskModal
+                    visible={modalVisible}
+                    onClose={() => setModalVisible(false)}
+                    onSubmit={addTask}
+                />
 
-            <TaskDetailModal
-                visible={!!selectedOcc}
-                task={selectedOcc?.task}
-                occurrenceDate={selectedOcc?.date}
-                onClose={() => setSelectedOcc(null)}
-                onDelete={() => { deleteTask(selectedOcc.task); setSelectedOcc(null); }}
-                onUpdate={upd => { updateTask({ original: selectedOcc.task, newData: upd }); setSelectedOcc(null); }}
-            />
+                <TaskDetailModal
+                    visible={!!selectedOcc}
+                    task={selectedOcc?.task}
+                    occurrenceDate={selectedOcc?.date}
+                    onClose={() => setSelectedOcc(null)}
+                    onDelete={() => { deleteTask(selectedOcc.task); setSelectedOcc(null); }}
+                    onUpdate={upd => { updateTask({ original: selectedOcc.task, newData: upd }); setSelectedOcc(null); }}
+                />
 
-            <ConfirmModal
-                visible={confirmVisible}
-                message="Bist du sicher, dass du diese Aufgabe abhaken möchtest?"
-                onCancel={() => { setConfirmVisible(false); setPendingIndex(null); }}
-                onConfirm={() => doCheck(pendingIndex)}
-            />
-        </View>
+                <ConfirmModal
+                    visible={confirmVisible}
+                    message="Bist du sicher, dass du diese Aufgabe abhaken möchtest?"
+                    onCancel={() => { setConfirmVisible(false); setPendingIndex(null); }}
+                    onConfirm={() => doCheck(pendingIndex, true)}
+                />
+            </AppBackground>
+        </ImageBackground>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fff' },
+    background: {
+        flex: 1,
+        width: '100%',
+        height: '100%',
+    },
+    container: { flex: 1, backgroundColor: '#fff', backgroundColor: 'rgba(0,0,0,0.3)', },
     monthHeader: {
         fontSize: 20, fontWeight: 'bold',
-        color: '#4527A0', margin: 10
+        color: '#EDE7F6', margin: 10
     },
     dayHeader: {
         fontSize: 16, fontWeight: '600',
-        color: '#7E57C2', marginLeft: 20, marginVertical: 5
+        color: '#D1C4E9', marginLeft: 20, marginVertical: 5
     },
     taskBox: {
         flexDirection: 'row', alignItems: 'center',
