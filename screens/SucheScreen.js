@@ -23,7 +23,6 @@ export default function SucheScreen() {
 
     const { tasks, addTask, checkTask, deleteTask, updateTask } = useTasks();
 
-    // Alte Tasks automatisch entfernen
     useEffect(() => {
         const today = new Date(); today.setHours(0, 0, 0, 0);
         tasks.forEach(task => {
@@ -32,7 +31,6 @@ export default function SucheScreen() {
         });
     }, [tasks]);
 
-    // Filtern & Sortieren
     const filteredAndSorted = useMemo(() => {
         const now = new Date();
         return tasks
@@ -54,22 +52,39 @@ export default function SucheScreen() {
     const getRecurrenceIcon = r =>
         r === 'Einmalig' ? 'calendar-outline' : 'repeat';
 
-    // Klick auf Radiobutton
-    const onRadioPress = ({ task, date, past }, idx) => {
-        if (task.done) return;
-        if (!past) {
-            setPending({ task, idx });       // ← hier Index mitgeben
-            setConfirmVisible(true);
-        } else {
-            doCheck({ task, idx }, false);   // direkt abhaken, ohne XP
+    const getTextColor = (p) => {
+        switch (p) {
+            case '1': return '#222';
+            case '2': return '#333';
+            case '3': return '#fff';
+            case '4': return '#fff';
+            case '5': return '#eee';
+            default: return '#fff';
         }
     };
 
-    // tatsächlich abhaken + optional XP-Log
+    const getPriorityBackground = (p) => ({
+        '1': '#EDE7F6',
+        '2': '#D1C4E9',
+        '3': '#B39DDB',
+        '4': '#9575CD',
+        '5': '#7E57C2',
+    }[p] || '#B39DDB');
+
+    const onRadioPress = ({ task, date, past }, idx) => {
+        if (task.done) return;
+        if (!past) {
+            setPending({ task, idx });
+            setConfirmVisible(true);
+        } else {
+            doCheck({ task, idx }, false);
+        }
+    };
+
     const doCheck = async ({ task, idx }, withXP = true) => {
         await checkTask(idx);
         if (withXP) {
-            const xp = getXPFromPriority(task.priority); // Index stimmt jetzt
+            const xp = getXPFromPriority(task.priority);
             console.log(`Gewonnene XP: ${xp}`);
         }
         setConfirmVisible(false);
@@ -79,21 +94,23 @@ export default function SucheScreen() {
     return (
         <ImageBackground source={require('../assets/background.png')} style={styles.background} resizeMode="cover">
             <AppBackground style={styles.container}>
-                <TextInput
-                    style={styles.searchInput}
-                    placeholder="Suche nach Titel..."
-                    value={searchText}
-                    onChangeText={setSearchText}
-                />
+
+                {/* Moderne Suchleiste */}
+                <View style={styles.searchWrapper}>
+                    <Ionicons name="search" size={20} color="#bbb" style={styles.searchIcon} />
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder="Suche nach Titel..."
+                        placeholderTextColor="#bbb"
+                        value={searchText}
+                        onChangeText={setSearchText}
+                    />
+                </View>
 
                 <ScrollView style={styles.taskList}>
                     <Text style={styles.subHeader}>Kürzlich erstellt</Text>
                     {filteredAndSorted.map(({ task, date, past }, i) => {
                         const done = task.done;
-                        // Rahmenfarben:
-                        //   erledigt + doneAt>date → grün
-                        //   erledigt + past      → gelb
-                        //   past & !done         → rot
                         let borderColor = 'transparent';
                         if (done) {
                             borderColor = date < new Date(task.doneAt) ? 'green' : 'yellow';
@@ -108,14 +125,14 @@ export default function SucheScreen() {
                                 style={[
                                     styles.taskBox,
                                     {
-                                        backgroundColor: getPriorityColor(task.priority),
+                                        backgroundColor: getPriorityBackground(task.priority),
                                         borderColor,
-                                        borderWidth: borderColor === 'transparent' ? 0 : 2
-                                    }
+                                        borderWidth: borderColor === 'transparent' ? 0 : 2,
+                                    },
                                 ]}
                             >
                                 <TouchableOpacity
-                                    onPress={() => onRadioPress({ task, date, past })}
+                                    onPress={() => onRadioPress({ task, date, past }, i)}
                                     style={styles.radioButton}
                                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                 >
@@ -127,11 +144,13 @@ export default function SucheScreen() {
                                 <View style={styles.separator} />
 
                                 <View style={styles.titleRow}>
-                                    <Text style={styles.taskTitle}>{task.title}</Text>
+                                    <Text style={[styles.taskTitle, { color: getTextColor(task.priority) }]}>
+                                        {task.title}
+                                    </Text>
                                     <Ionicons
                                         name={getRecurrenceIcon(task.recurrence)}
                                         size={18}
-                                        color="#7E57C2"
+                                        color={getTextColor(task.priority)}
                                         style={{ marginLeft: 8 }}
                                     />
                                 </View>
@@ -166,9 +185,9 @@ export default function SucheScreen() {
                     visible={confirmVisible}
                     message="Bist du sicher, dass du diese Aufgabe abhaken möchtest?"
                     onCancel={() => { setConfirmVisible(false); setPending(null); }}
-                    onConfirm={() => pending && doCheck(pending, true)}  // nur noch pending
+                    onConfirm={() => pending && doCheck(pending, true)}
                 />
-            </AppBackground >
+            </AppBackground>
         </ImageBackground>
     );
 }
@@ -179,34 +198,87 @@ const styles = StyleSheet.create({
         width: '100%',
         height: '100%',
     },
+    container: {
+        flex: 1,
+        padding: 20,
+        paddingBottom: 90,
+        backgroundColor: 'rgba(0,0,0,0.3)',
+    },
 
-    container: { flex: 1, padding: 20, paddingBottom: 90, backgroundColor: 'rgba(0,0,0,0.3)' },
+    // Stylische Suchleiste
+    searchWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.07)',
+        borderRadius: 30,
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        marginBottom: 16,
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 5,
+        elevation: 3,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    searchIcon: {
+        marginRight: 8,
+    },
     searchInput: {
-        borderWidth: 1, borderColor: '#ccc',
-        borderRadius: 10, padding: 10, marginBottom: 5,
-        backgroundColor: '#fff'
+        flex: 1,
+        color: '#fff',
+        fontSize: 16,
+        padding: 0,
     },
+
     subHeader: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 10,
-        marginLeft: 4
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#C7AFFF',
+        marginBottom: 12,
+        marginLeft: 4,
     },
-    taskList: { flex: 1 },
+    taskList: {
+        flex: 1,
+    },
     taskBox: {
-        flexDirection: 'row', alignItems: 'center',
-        padding: 15, borderRadius: 12, marginBottom: 12
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        borderRadius: 14,
+        marginBottom: 12,
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 6,
+        elevation: 3,
     },
     radioButton: {
-        width: 28, height: 28, borderRadius: 14,
-        borderWidth: 2, borderColor: '#7E57C2',
-        alignItems: 'center', justifyContent: 'center',
-        backgroundColor: '#fff', marginRight: 12
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        borderWidth: 2,
+        borderColor: '#7E57C2',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#fff',
+        marginRight: 12,
     },
     separator: {
-        width: 1, height: 24,
-        backgroundColor: '#7E57C2', marginRight: 12
+        width: 1,
+        height: 24,
+        backgroundColor: '#7E57C2',
+        marginRight: 12,
     },
-    titleRow: { flexDirection: 'row', alignItems: 'center' },
-    taskTitle: { fontSize: 16, color: '#333', flex: 1 }
+    titleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+    },
+    taskTitle: {
+        fontSize: 16,
+        flex: 1,
+        fontWeight: '500',
+    },
 });

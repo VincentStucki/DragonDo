@@ -14,6 +14,8 @@ import { useOccurrences } from '../hooks/useOccurrences';
 import { getXPFromPriority } from '../utils/xp';
 import { useXP } from '../context/XPContext';
 import AppBackground from '../components/AppBackground';
+import Animated, { FadeIn } from 'react-native-reanimated';
+
 
 export default function DemnaechstScreen() {
     const [modalVisible, setModalVisible] = useState(false);
@@ -66,6 +68,26 @@ export default function DemnaechstScreen() {
         '4': '#9575CD', '5': '#7E57C2'
     })[p] || '#EDE7F6';
     const getRecurrenceIcon = r => r === 'Einmalig' ? 'calendar-outline' : 'repeat';
+    const getPriorityBackground = (p) => ({
+        '1': '#EDE7F6',
+        '2': '#D1C4E9',
+        '3': '#B39DDB',
+        '4': '#9575CD',
+        '5': '#7E57C2',
+    }[p] || '#B39DDB');
+
+
+    const getTextColor = (p) => {
+        switch (p) {
+            case '1': return '#222'; // dunkel auf hellem Hintergrund
+            case '2': return '#333';
+            case '3': return '#fff';
+            case '4': return '#fff';
+            case '5': return '#eee'; // hell auf dunklem Hintergrund
+            default: return '#fff';
+        }
+    };
+
 
     // Klick auf den Radiobutton
     const onRadioPress = (task, taskIdx, date, done) => {
@@ -123,36 +145,48 @@ export default function DemnaechstScreen() {
                 const timeLabel = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
                 return (
-                    <TouchableOpacity
-                        key={key}
-                        style={[
-                            styles.taskBox,
-                            {
-                                backgroundColor: getPriorityColor(task.priority),
-                                borderColor, borderWidth: borderColor === 'transparent' ? 0 : 2
-                            }
-                        ]}
-                        onPress={() => setSelectedOcc({ task, date })}
-                    >
+                    <Animated.View key={key} entering={FadeIn.duration(400)}>
                         <TouchableOpacity
-                            style={styles.radioButton}
-                            onPress={() => onRadioPress(task, idx, date, isDone)}
-                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            key={key}
+                            style={[
+                                styles.taskBox,
+                                {
+                                    backgroundColor: getPriorityBackground(task.priority),
+                                    borderColor,
+                                    borderWidth: borderColor === 'transparent' ? 0 : 2,
+                                }
+                            ]}
+                            onPress={() => setSelectedOcc({ task, date })}
                         >
-                            {isDone && <Ionicons name="checkmark" size={20} color="#7E57C2" />}
+                            <TouchableOpacity
+                                style={styles.radioButton}
+                                onPress={() => onRadioPress(task, idx, date, isDone)}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            >
+                                {isDone && <Ionicons name="checkmark" size={20} color="#7E57C2" />}
+                            </TouchableOpacity>
+
+                            <View style={styles.separator} />
+
+                            <View style={styles.titleRow}>
+                                <Text style={[styles.taskTitle, { color: getTextColor(task.priority) }]}>
+                                    {task.title}
+                                </Text>
+
+                                <Ionicons
+                                    name={getRecurrenceIcon(task.recurrence)}
+                                    size={18}
+                                    color={getTextColor(task.priority)}
+                                    style={{ marginHorizontal: 6 }}
+                                />
+
+                                <Text style={[styles.timeLabel, { color: getTextColor(task.priority) }]}>
+                                    {timeLabel}
+                                </Text>
+                            </View>
                         </TouchableOpacity>
+                    </Animated.View>
 
-                        <View style={styles.separator} />
-
-                        <View style={styles.titleRow}>
-                            <Text style={styles.taskTitle}>{task.title}</Text>
-                            <Ionicons
-                                name={getRecurrenceIcon(task.recurrence)}
-                                size={18} color="#7E57C2"
-                            />
-                            <Text style={styles.timeLabel}>{timeLabel}</Text>
-                        </View>
-                    </TouchableOpacity>
                 );
             })}
         </View>
@@ -213,31 +247,70 @@ const styles = StyleSheet.create({
         width: '100%',
         height: '100%',
     },
-    container: { flex: 1, backgroundColor: '#fff', backgroundColor: 'rgba(0,0,0,0.3)', },
+    container: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        paddingBottom: 100,
+    },
     monthHeader: {
-        fontSize: 20, fontWeight: 'bold',
-        color: '#EDE7F6', margin: 10
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: '#C7AFFF',
+        marginTop: 20,
+        marginLeft: 16,
+        marginBottom: 4,
     },
     dayHeader: {
-        fontSize: 16, fontWeight: '600',
-        color: '#D1C4E9', marginLeft: 20, marginVertical: 5
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#B39DDB',
+        marginLeft: 20,
+        marginVertical: 5,
     },
     taskBox: {
-        flexDirection: 'row', alignItems: 'center',
-        padding: 15, borderRadius: 12,
-        marginHorizontal: 10, marginVertical: 5
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.07)',
+        padding: 16,
+        borderRadius: 14,
+        marginHorizontal: 16,
+        marginVertical: 6,
+        shadowColor: '#000',
+        shadowOpacity: 0.15,
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 4,
+        elevation: 3,
     },
     radioButton: {
-        width: 28, height: 28, borderRadius: 14,
-        borderWidth: 2, borderColor: '#7E57C2',
-        alignItems: 'center', justifyContent: 'center',
-        backgroundColor: '#fff'
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        borderWidth: 2,
+        borderColor: '#7E57C2',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#fff',
     },
     separator: {
-        width: 1, height: 24,
-        backgroundColor: '#7E57C2', marginHorizontal: 12
+        width: 1,
+        height: 24,
+        backgroundColor: '#9575CD',
+        marginHorizontal: 12,
     },
-    titleRow: { flex: 1, flexDirection: 'row', alignItems: 'center' },
-    taskTitle: { fontSize: 16, color: '#333', flex: 1 },
-    timeLabel: { marginLeft: 8, fontSize: 14, color: '#555' }
+    titleRow: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    taskTitle: {
+        fontSize: 16,
+        color: '#fff',
+        flex: 1,
+        fontWeight: '500',
+    },
+    timeLabel: {
+        marginLeft: 8,
+        fontSize: 13,
+        color: '#CCC',
+    },
 });

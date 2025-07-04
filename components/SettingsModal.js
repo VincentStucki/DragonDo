@@ -43,8 +43,8 @@ export default function SettingsModal({ visible, onClose, currentName, onSave })
 
     const handleClearEverything = async () => {
         try {
-            await clearAllTasks();               // Tasks löschen
-            await resetXP();                     // XP zurücksetzen
+            await clearAllTasks();
+            await resetXP();
             Alert.alert('Erfolg', 'Alle Tasks und XP wurden zurückgesetzt.');
             onClose();
         } catch (e) {
@@ -53,12 +53,7 @@ export default function SettingsModal({ visible, onClose, currentName, onSave })
     };
 
     return (
-        <Modal
-            visible={visible}
-            animationType="fade"
-            transparent
-            onRequestClose={onClose}
-        >
+        <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
             <TouchableWithoutFeedback onPress={onClose}>
                 <View style={styles.modalOverlay}>
                     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -67,26 +62,29 @@ export default function SettingsModal({ visible, onClose, currentName, onSave })
                             style={styles.modalContentWrapper}
                         >
                             <View style={styles.modalContent}>
-                                <Text style={styles.label}>Name des Drachenei's:</Text>
+                                <Text style={styles.title}>Einstellungen</Text>
+
+                                <Text style={styles.label}>Name deines Drachen-Ei's</Text>
                                 <TextInput
                                     style={styles.input}
                                     value={name}
                                     onChangeText={setName}
-                                    placeholder="Gib einen Namen ein"
+                                    placeholder="Name eingeben"
+                                    placeholderTextColor="#aaa"
                                 />
 
                                 <TouchableOpacity style={styles.button} onPress={handleSave}>
                                     <Text style={styles.buttonText}>Speichern</Text>
                                 </TouchableOpacity>
 
-                                <TouchableOpacity
-                                    style={[styles.button, styles.clearButton]}
-                                    onPress={handleClearStorage}
-                                >
-                                    <Text style={styles.buttonText}>Tasks löschen</Text>
+                                <View style={styles.divider} />
+
+                                <TouchableOpacity style={styles.clearButton} onPress={handleClearStorage}>
+                                    <Text style={styles.clearText}>Nur Tasks löschen</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity style={[styles.button, styles.clearButton]} onPress={handleClearEverything}>
-                                    <Text style={styles.buttonText}>Tasks & XP zurücksetzen</Text>
+
+                                <TouchableOpacity style={[styles.clearButton, { backgroundColor: '#B71C1C' }]} onPress={handleClearEverything}>
+                                    <Text style={styles.clearText}>Alles zurücksetzen</Text>
                                 </TouchableOpacity>
                             </View>
                         </KeyboardAvoidingView>
@@ -100,46 +98,69 @@ export default function SettingsModal({ visible, onClose, currentName, onSave })
 const styles = StyleSheet.create({
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.4)',
+        backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'center',
         alignItems: 'center',
     },
     modalContentWrapper: {
-        width: '80%',
+        width: '85%',
     },
     modalContent: {
-        backgroundColor: '#fff',
-        padding: 20,
+        backgroundColor: '#1F1B2E',
+        padding: 24,
         borderRadius: 20,
-        elevation: 10,
         shadowColor: '#000',
-        shadowOpacity: 0.2,
+        shadowOpacity: 0.25,
         shadowOffset: { width: 0, height: 2 },
-        shadowRadius: 8,
+        shadowRadius: 6,
+        elevation: 10,
+    },
+    title: {
+        fontSize: 20,
+        color: '#EDE7F6',
+        fontWeight: 'bold',
+        marginBottom: 20,
+        textAlign: 'center',
     },
     label: {
-        fontSize: 18,
-        marginBottom: 10,
+        color: '#D1C4E9',
+        fontSize: 14,
+        marginBottom: 8,
     },
     input: {
-        borderWidth: 1,
-        borderColor: '#ccc',
-        padding: 10,
+        backgroundColor: '#2A2540',
         borderRadius: 10,
-        marginBottom: 20,
+        padding: 12,
+        color: '#fff',
+        fontSize: 16,
+        marginBottom: 16,
     },
     button: {
         backgroundColor: '#7E57C2',
-        padding: 12,
+        paddingVertical: 12,
         borderRadius: 10,
-        marginTop: 10,
-    },
-    clearButton: {
-        backgroundColor: '#e53935',
+        marginTop: 4,
     },
     buttonText: {
         color: '#fff',
-        fontWeight: 'bold',
         textAlign: 'center',
+        fontWeight: 'bold',
+        fontSize: 15,
+    },
+    divider: {
+        borderBottomWidth: 1,
+        borderColor: '#3D2D78',
+        marginVertical: 18,
+    },
+    clearButton: {
+        backgroundColor: '#C62828',
+        paddingVertical: 12,
+        borderRadius: 10,
+        marginTop: 8,
+    },
+    clearText: {
+        color: '#fff',
+        textAlign: 'center',
+        fontWeight: '600',
     },
 });
